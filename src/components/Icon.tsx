@@ -18,7 +18,9 @@ export type IconName =
   | 'userPlus'
   | 'info'
   | 'lock'
-  | 'activity';
+  | 'activity'
+  | 'mail'
+  | 'mapPin';
 
 const PATHS: Record<IconName, string[]> = {
   chat: [
@@ -81,6 +83,14 @@ const PATHS: Record<IconName, string[]> = {
     'M7 11V7a5 5 0 0 1 10 0v4',
   ],
   activity: ['M22 12h-4l-3 9L9 3l-3 9H2'],
+  mail: [
+    'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+    'M22 6l-10 7L2 6',
+  ],
+  mapPin: [
+    'M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z',
+    'M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  ],
 };
 
 type IconProps = {

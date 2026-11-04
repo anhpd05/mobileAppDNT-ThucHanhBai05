@@ -14,8 +14,9 @@ export type MainTabParamList = {
 
 export type RootStackParamList = {
   Login: undefined;
+  Register: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList>;
-  ChatDetail: { conversationId: string };
+  ChatDetail: { peerId: string };
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =

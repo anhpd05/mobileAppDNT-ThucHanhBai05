@@ -7,36 +7,22 @@ import {
   spacing,
   typography,
 } from '../../../theme';
-import type { User } from '../../../types/models';
+import type { Me } from '../../../types/models';
 
 type AccountCardProps = {
-  user: User;
+  me: Me;
+  online: boolean;
 };
 
-export function AccountCard({ user }: AccountCardProps) {
+export function AccountCard({ me, online }: AccountCardProps) {
   return (
     <View style={styles.card}>
-      <Avatar source={user.avatar} size={80} online={user.isOnline} />
-      <Text style={styles.name}>{user.name}</Text>
-      <Text style={typography.bodyMuted}>{`@${user.username}`}</Text>
-      <Text style={typography.bodyMuted}>{user.email}</Text>
-      <View
-        style={[
-          styles.pill,
-          {
-            backgroundColor: user.isOnline
-              ? colors.primarySoft
-              : colors.background,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.pillText,
-            { color: user.isOnline ? colors.online : colors.textMuted },
-          ]}
-        >
-          {user.isOnline ? 'Đang hoạt động' : 'Đang ẩn trạng thái'}
+      <Avatar name={me.name} seed={me.id} size={80} online={online} pulse />
+      <Text style={styles.name}>{me.name}</Text>
+      <Text style={typography.bodyMuted}>{me.email}</Text>
+      <View style={[styles.pill, online ? styles.pillOn : styles.pillOff]}>
+        <Text style={[styles.pillText, online ? styles.pillTextOn : null]}>
+          {online ? 'Đang hoạt động' : 'Đang ẩn trạng thái'}
         </Text>
       </View>
     </View>
@@ -46,7 +32,8 @@ export function AccountCard({ user }: AccountCardProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
+    borderRadius: radius.xxl,
+    borderBottomLeftRadius: radius.tail,
     padding: spacing.xl,
     alignItems: 'center',
     marginHorizontal: spacing.lg,
@@ -64,7 +51,17 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.pill,
   },
+  pillOn: {
+    backgroundColor: colors.primarySoft,
+  },
+  pillOff: {
+    backgroundColor: colors.background,
+  },
   pillText: {
     ...typography.caption,
+  },
+  pillTextOn: {
+    color: colors.onlineText,
+    fontWeight: '700',
   },
 });

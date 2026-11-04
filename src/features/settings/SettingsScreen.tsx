@@ -16,17 +16,24 @@ import { AccountCard } from './components/AccountCard';
 import { SettingSwitchRow } from './components/SettingSwitchRow';
 
 export function SettingsScreen() {
-  const { user, logout, setOnline } = useAuth();
+  const { me, showOnline, setShowOnline, logout } = useAuth();
   const { enabled, setEnabled } = useNotifications();
 
-  if (!user) {
+  if (!me) {
     return null;
   }
 
   const confirmLogout = () => {
     Alert.alert('Xác nhận', 'Bạn có chắc muốn đăng xuất?', [
       { text: 'Huỷ', style: 'cancel' },
-      { text: 'Đồng ý', style: 'destructive', onPress: logout },
+      {
+        text: 'Đồng ý',
+        style: 'destructive',
+        onPress: () =>
+          logout().catch(() =>
+            Alert.alert('Không đăng xuất được', 'Vui lòng thử lại.'),
+          ),
+      },
     ]);
   };
 
@@ -34,15 +41,15 @@ export function SettingsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader title="Cài đặt" />
-        <AccountCard user={user} />
+        <AccountCard me={me} online={showOnline} />
         <Text style={styles.sectionLabel}>Tuỳ chọn</Text>
         <View style={styles.card}>
           <SettingSwitchRow
             icon="activity"
             label="Hiển thị trạng thái online"
             description="Bạn bè thấy khi bạn đang hoạt động"
-            value={user.isOnline}
-            onValueChange={setOnline}
+            value={showOnline}
+            onValueChange={setShowOnline}
           />
           <View style={styles.separator} />
           <SettingSwitchRow
@@ -76,14 +83,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   sectionLabel: {
-    ...typography.caption,
+    ...typography.overline,
     marginHorizontal: spacing.lg,
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
+    borderBottomRightRadius: radius.tail,
     marginHorizontal: spacing.lg,
     overflow: 'hidden',
   },
@@ -98,7 +106,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.dangerSoft,
     height: 50,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
+    borderBottomRightRadius: radius.tail,
     marginHorizontal: spacing.lg,
     marginTop: spacing.xl,
   },

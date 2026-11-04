@@ -1,54 +1,143 @@
-import {
-  Image,
-  StyleSheet,
-  View,
-  type ImageSourcePropType,
-} from 'react-native';
-import { colors } from '../theme';
+import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { avatarPalette, colors } from '../theme';
+import { PulseDot } from './PulseDot';
 
 type AvatarProps = {
-  source: ImageSourcePropType;
+  name: string;
+  seed: string;
   size?: number;
   online?: boolean;
+  // Chấm online phát sóng (chỉ dùng ở vài chỗ nổi bật, không dùng cho cả danh sách).
+  pulse?: boolean;
+  // Vòng gradient "đang phát tín hiệu" quanh avatar (dải Đang hoạt động).
+  ring?: boolean;
 };
 
-export function Avatar({ source, size = 48, online }: AvatarProps) {
+const RING_GAP = 4;
+const RING_STROKE = 2.5;
+
+function colorFor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) % 1000003;
+  }
+  return avatarPalette[hash % avatarPalette.length];
+}
+
+// Tên Việt: chữ cái đầu của từ cuối ("Phạm Đức Anh" -> "A").
+function initialOf(name: string): string {
+  const words = name.trim().split(/\s+/);
+  const last = words[words.length - 1] ?? '';
+  return last ? Array.from(last)[0].toUpperCase() : '?';
+}
+
+export function Avatar({
+  name,
+  seed,
+  size = 48,
+  online,
+  pulse = false,
+  ring = false,
+}: AvatarProps) {
   const dot = Math.max(10, Math.round(size * 0.26));
+  const outer = ring ? size + RING_GAP * 2 : size;
+  const half = size / 2;
 
   return (
-    <View style={{ width: size, height: size }}>
-      <Image
-        source={source}
+    <View style={{ width: outer, height: outer }}>
+      {ring && (
+        <Svg width={outer} height={outer} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={colors.primaryBright} />
+              <Stop offset="1" stopColor={colors.online} />
+            </LinearGradient>
+          </Defs>
+          <Circle
+            cx={outer / 2}
+            cy={outer / 2}
+            r={outer / 2 - RING_STROKE / 2}
+            stroke="url(#ring)"
+            strokeWidth={RING_STROKE}
+            fill="none"
+          />
+        </Svg>
+      )}
+      <View
         style={[
-          styles.image,
-          { width: size, height: size, borderRadius: size / 2 },
+          styles.circle,
+          {
+            width: size,
+            height: size,
+            borderRadius: half,
+            backgroundColor: colorFor(seed),
+          },
+          ring && styles.ringInset,
         ]}
-      />
+      >
+        <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="gloss" x1="0" y1="0" x2="0.8" y2="1">
+              <Stop offset="0" stopColor={colors.white} stopOpacity={0.3} />
+              <Stop offset="0.6" stopColor={colors.white} stopOpacity={0} />
+            </LinearGradient>
+          </Defs>
+          <Circle cx={half} cy={half} r={half} fill="url(#gloss)" />
+        </Svg>
+        <Text
+          style={[styles.initial, { fontSize: size * 0.42 }]}
+          allowFontScaling={false}
+        >
+          {initialOf(name)}
+        </Text>
+      </View>
       {online !== undefined && (
-        <View
-          style={[
-            styles.dot,
-            {
-              width: dot,
-              height: dot,
-              borderRadius: dot / 2,
-              backgroundColor: online ? colors.online : colors.offline,
-            },
-          ]}
-        />
+        <View style={[styles.dotWrap, ring && styles.dotWrapRing]}>
+          {online && pulse ? (
+            <PulseDot size={dot} borderColor={colors.white} />
+          ) : (
+            <View
+              style={[
+                styles.dot,
+                {
+                  width: dot,
+                  height: dot,
+                  borderRadius: dot / 2,
+                  backgroundColor: online ? colors.online : colors.offline,
+                },
+              ]}
+            />
+          )}
+        </View>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  image: {
-    backgroundColor: colors.border,
+  circle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  dot: {
+  ringInset: {
+    margin: RING_GAP,
+  },
+  initial: {
+    color: colors.white,
+    fontWeight: '700',
+  },
+  dotWrap: {
     position: 'absolute',
     right: 0,
     bottom: 0,
+  },
+  dotWrapRing: {
+    right: RING_GAP / 2,
+    bottom: RING_GAP / 2,
+  },
+  dot: {
     borderWidth: 2,
     borderColor: colors.white,
   },

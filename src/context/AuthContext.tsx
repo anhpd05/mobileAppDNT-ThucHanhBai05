@@ -1,47 +1,194 @@
+import { createAsyncStorage } from '@react-native-async-storage/async-storage';
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import { currentUser, demoAccount } from '../data/users';
-import type { User } from '../types/models';
+import { AppState } from 'react-native';
+import {
+  login as loginRequest,
+  logout as logoutRequest,
+  mapAuthError,
+  register as registerRequest,
+  subscribeAuth,
+  type AuthUser,
+} from '../services/authService';
+import {
+  pauseConnection,
+  resumeConnection,
+  startPresence,
+} from '../services/presenceService';
+import { subscribeMyProfile } from '../services/userService';
+import type { Me } from '../types/models';
 
 type AuthContextValue = {
-  user: User | null;
-  demoAccount: { username: string; password: string };
-  login: (username: string, password: string) => string | null;
-  logout: () => void;
-  setOnline: (isOnline: boolean) => void;
+  me: Me | null;
+  initializing: boolean;
+  showOnline: boolean;
+  setShowOnline: (visible: boolean) => void;
+  login: (email: string, password: string) => Promise<string | null>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<string | null>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const prefsStorage = createAsyncStorage('chat-prefs');
+const showOnlineKey = (uid: string) => 'show-online:' + uid;
+
+type OnlinePref = { uid: string; visible: boolean };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [initializing, setInitializing] = useState(true);
+  const [me, setMe] = useState<Me | null>(null);
+  // Chỉ có giá trị khi đã đọc xong AsyncStorage của đúng uid, để presence không ghi online rồi mới ẩn.
+  const [pref, setPref] = useState<OnlinePref | null>(null);
 
-  const login = useCallback((username: string, password: string) => {
-    if (
-      username.trim() !== demoAccount.username ||
-      password !== demoAccount.password
-    ) {
-      return 'Sai tài khoản hoặc mật khẩu';
+  useEffect(
+    () =>
+      subscribeAuth(user => {
+        try {
+          setAuthUser(user);
+        } finally {
+          setInitializing(false);
+        }
+      }),
+    [],
+  );
+
+  const uid = authUser?.uid;
+  const email = authUser?.email ?? '';
+
+  useEffect(() => {
+    if (!uid) {
+      setMe(null);
+      setPref(null);
+      return;
     }
-    setUser({ ...currentUser });
-    return null;
+    return subscribeMyProfile(uid, profile =>
+      setMe({ id: uid, email, name: profile?.name ?? '' }),
+    );
+  }, [uid, email]);
+
+  useEffect(() => {
+    if (!uid) {
+      return;
+    }
+    let cancelled = false;
+    prefsStorage
+      .getItem(showOnlineKey(uid))
+      .then(value => {
+        if (!cancelled) {
+          setPref({ uid, visible: value !== 'false' });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPref({ uid, visible: true });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [uid]);
+
+  const prefReady = pref !== null && pref.uid === uid;
+  const showOnline = prefReady ? pref.visible : true;
+
+  useEffect(() => {
+    if (!uid || !prefReady) {
+      return;
+    }
+    return startPresence(uid, showOnline);
+  }, [uid, prefReady, showOnline]);
+
+  // Ở nền quá 5 giây thì ngắt kết nối để server ghi offline (onDisconnect); quay lại thì nối lại.
+  useEffect(() => {
+    if (!uid) {
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'background') {
+        timer = setTimeout(pauseConnection, 5000);
+      } else if (state === 'active') {
+        clearTimeout(timer);
+        resumeConnection();
+      }
+    });
+    return () => {
+      subscription.remove();
+      clearTimeout(timer);
+    };
+  }, [uid]);
+
+  const setShowOnline = useCallback(
+    (visible: boolean) => {
+      if (!uid) {
+        return;
+      }
+      setPref({ uid, visible });
+      prefsStorage.setItem(showOnlineKey(uid), String(visible)).catch(() => {});
+    },
+    [uid],
+  );
+
+  const login = useCallback(async (emailInput: string, password: string) => {
+    try {
+      await loginRequest(emailInput, password);
+      return null;
+    } catch (error) {
+      return mapAuthError(error);
+    }
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const register = useCallback(
+    async (name: string, emailInput: string, password: string) => {
+      try {
+        await registerRequest(name, emailInput, password);
+        return null;
+      } catch (error) {
+        return mapAuthError(error);
+      }
+    },
+    [],
+  );
 
-  const setOnline = useCallback((isOnline: boolean) => {
-    setUser(prev => (prev ? { ...prev, isOnline } : prev));
-  }, []);
+  const logout = useCallback(async () => {
+    if (uid) {
+      await logoutRequest(uid);
+    }
+  }, [uid]);
 
   const value = useMemo(
-    () => ({ user, demoAccount, login, logout, setOnline }),
-    [user, login, logout, setOnline],
+    () => ({
+      me,
+      // Giữ màn chờ tới khi biết có đăng nhập hay không và đã đọc xong hồ sơ, để không nháy màn Đăng nhập.
+      initializing: initializing || (authUser !== null && me === null),
+      showOnline,
+      setShowOnline,
+      login,
+      register,
+      logout,
+    }),
+    [
+      me,
+      authUser,
+      initializing,
+      showOnline,
+      setShowOnline,
+      login,
+      register,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
