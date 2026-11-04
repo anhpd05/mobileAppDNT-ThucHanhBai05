@@ -1,26 +1,37 @@
-import type { ImageSourcePropType } from 'react-native';
+export type Unsubscribe = () => void;
+
+export type Me = { id: string; name: string; email: string };
 
 export type User = {
   id: string;
   name: string;
-  username: string;
-  email: string;
-  avatar: ImageSourcePropType;
   isOnline: boolean;
-  lastSeen: string;
+  lastSeen: number | null;
 };
 
-export type Message = {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  text: string;
-  createdAt: string;
-};
+export type GeoPoint = { lat: number; lng: number };
+
+export type Message =
+  | {
+      id: string;
+      senderId: string;
+      type: 'text';
+      text: string;
+      createdAt: number;
+    }
+  | {
+      id: string;
+      senderId: string;
+      type: 'location';
+      location: GeoPoint;
+      createdAt: number;
+    };
 
 export type Conversation = {
-  id: string;
-  participantId: string;
+  peerId: string;
+  lastMessage: string;
+  lastTime: number;
+  lastFrom: string;
   unread: number;
 };
 

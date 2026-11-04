@@ -18,16 +18,19 @@ export function minutesAgo(minutes: number): string {
   return new Date(Date.now() - minutes * MINUTE).toISOString();
 }
 
-export function formatClock(iso: string): string {
-  const date = new Date(iso);
+export function formatClock(value: string | number): string {
+  const date = new Date(value);
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function formatTime(iso: string, now: Date = new Date()): string {
-  const date = new Date(iso);
+export function formatTime(
+  value: string | number,
+  now: Date = new Date(),
+): string {
+  const date = new Date(value);
   const days = Math.round((startOfDay(now) - startOfDay(date)) / DAY);
   if (days <= 0) {
-    return formatClock(iso);
+    return formatClock(value);
   }
   if (days === 1) {
     return 'Hôm qua';
@@ -38,10 +41,13 @@ export function formatTime(iso: string, now: Date = new Date()): string {
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
 }
 
-export function formatLastSeen(iso: string, now: Date = new Date()): string {
+export function formatLastSeen(
+  value: string | number,
+  now: Date = new Date(),
+): string {
   const minutes = Math.max(
     0,
-    Math.floor((now.getTime() - new Date(iso).getTime()) / MINUTE),
+    Math.floor((now.getTime() - new Date(value).getTime()) / MINUTE),
   );
   if (minutes < 1) {
     return 'Vừa mới hoạt động';
