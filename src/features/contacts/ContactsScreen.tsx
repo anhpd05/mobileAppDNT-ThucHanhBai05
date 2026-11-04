@@ -1,68 +1,176 @@
-import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/EmptyState';
+import { FadeInView } from '../../components/FadeInView';
+import { InsetSeparator } from '../../components/InsetSeparator';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { SearchBar } from '../../components/SearchBar';
+import { SkeletonList } from '../../components/SkeletonList';
 import { useChat } from '../../context/ChatContext';
 import type { MainTabScreenProps } from '../../navigation/types';
-import { colors } from '../../theme';
+import { colors, spacing, typography } from '../../theme';
+import type { User } from '../../types/models';
+import { INDEX_LETTERS, indexLetter } from '../../utils/names';
+import { AlphabetIndex } from './components/AlphabetIndex';
 import { ContactItem } from './components/ContactItem';
+import { ContactSectionHeader } from './components/ContactSectionHeader';
 
-function Separator() {
-  return <View style={styles.separator} />;
-}
+type ContactSection = {
+  key: string;
+  title: string;
+  data: User[];
+};
 
 export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
-  const { users, openWith } = useChat();
+  const { users, usersLoaded, conversations } = useChat();
   const [keyword, setKeyword] = useState('');
+  const listRef = useRef<SectionList<User, ContactSection>>(null);
 
   const onlineCount = users.filter(u => u.isOnline).length;
+  const query = keyword.trim().toLowerCase();
 
-  const rows = useMemo(() => {
-    const query = keyword.trim().toLowerCase();
-    return users
-      .filter(u => query === '' || u.name.toLowerCase().includes(query))
-      .sort((a, b) => {
-        if (a.isOnline !== b.isOnline) {
-          return a.isOnline ? -1 : 1;
-        }
-        return a.name.localeCompare(b.name, 'vi');
-      });
-  }, [users, keyword]);
+  const unreadByPeer = useMemo(
+    () => new Map(conversations.map(c => [c.peerId, c.unread])),
+    [conversations],
+  );
 
-  const handleOpen = (userId: string) => {
-    const conversationId = openWith(userId);
-    navigation.navigate('ChatDetail', { conversationId });
-  };
+  // Danh bạ kiểu điện thoại: nhóm theo chữ cái đầu của tên (Đ riêng, ký tự lạ
+  // vào '#'), thứ tự nhóm cố định A→Z, trong nhóm xếp theo tên tiếng Việt.
+  const sections = useMemo(() => {
+    const groups = new Map<string, User[]>();
+    for (const user of users) {
+      if (query !== '' && !user.name.toLowerCase().includes(query)) {
+        continue;
+      }
+      const letter = indexLetter(user.name);
+      const group = groups.get(letter);
+      if (group) {
+        group.push(user);
+      } else {
+        groups.set(letter, [user]);
+      }
+    }
+    return Array.from(INDEX_LETTERS).flatMap((letter): ContactSection[] => {
+      const data = groups.get(letter);
+      return data
+        ? [
+            {
+              key: letter,
+              title: letter,
+              data: data.sort((a, b) => a.name.localeCompare(b.name, 'vi')),
+            },
+          ]
+        : [];
+    });
+  }, [users, query]);
+
+  const matchedCount = sections.reduce((sum, s) => sum + s.data.length, 0);
+  const showIndex = query === '' && sections.length > 1;
+
+  const openChat = useCallback(
+    (peerId: string) => navigation.navigate('ChatDetail', { peerId }),
+    [navigation],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScreenHeader
         title="Danh bạ"
-        subtitle={`${onlineCount} người đang hoạt động`}
+        badge={usersLoaded ? String(users.length) : undefined}
+        live={onlineCount > 0}
+        subtitle={
+          onlineCount > 0
+            ? `${onlineCount} người đang hoạt động`
+            : 'Chưa ai đang hoạt động'
+        }
       />
       <SearchBar
         value={keyword}
         onChangeText={setKeyword}
-        placeholder="Tìm kiếm danh bạ"
+        placeholder="Tìm theo tên"
       />
-      <FlatList
-        data={rows}
-        keyExtractor={u => u.id}
-        renderItem={({ item }) => (
-          <ContactItem user={item} onPress={() => handleOpen(item.id)} />
-        )}
-        ItemSeparatorComponent={Separator}
-        keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          <EmptyState
-            icon="users"
-            title="Không tìm thấy"
-            message="Không có người dùng nào khớp với từ khoá."
+      {usersLoaded ? (
+        <View style={styles.flex}>
+          <SectionList
+            ref={listRef}
+            sections={sections}
+            keyExtractor={u => u.id}
+            stickySectionHeadersEnabled
+            initialNumToRender={40}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[
+              styles.listContent,
+              showIndex && styles.listWithIndex,
+            ]}
+            onScrollToIndexFailed={info => {
+              listRef.current
+                ?.getScrollResponder()
+                ?.scrollTo({ y: info.averageItemLength * info.index });
+            }}
+            ListHeaderComponent={
+              query !== '' && matchedCount > 0 ? (
+                <Text style={styles.resultCount}>
+                  {`Tìm thấy ${matchedCount} người khớp “${keyword.trim()}”`}
+                </Text>
+              ) : undefined
+            }
+            renderSectionHeader={({ section }) => (
+              <ContactSectionHeader
+                title={section.title}
+                count={section.data.length}
+              />
+            )}
+            renderItem={({ item, index, section }) => (
+              <FadeInView index={index}>
+                <ContactItem
+                  user={item}
+                  query={query}
+                  unread={unreadByPeer.get(item.id) ?? 0}
+                  isFirst={index === 0}
+                  isLast={index === section.data.length - 1}
+                  onOpen={openChat}
+                />
+              </FadeInView>
+            )}
+            ItemSeparatorComponent={InsetSeparator}
+            ListEmptyComponent={
+              users.length === 0 ? (
+                <EmptyState
+                  icon="users"
+                  title="Chưa có người dùng khác"
+                  message="Mời bạn bè đăng ký để bắt đầu trò chuyện"
+                />
+              ) : (
+                <EmptyState
+                  icon="search"
+                  title="Không tìm thấy"
+                  message="Không có người dùng nào khớp với từ khoá."
+                  action={{
+                    label: 'Xoá tìm kiếm',
+                    onPress: () => setKeyword(''),
+                  }}
+                />
+              )
+            }
           />
-        }
-      />
+          {showIndex && (
+            <AlphabetIndex
+              letters={sections.map(s => s.title)}
+              onSelect={sectionIndex =>
+                listRef.current?.scrollToLocation({
+                  sectionIndex,
+                  itemIndex: 0,
+                  viewOffset: 0,
+                  animated: true,
+                })
+              }
+            />
+          )}
+        </View>
+      ) : (
+        <SkeletonList label="Đang tải danh bạ" rows={8} />
+      )}
     </SafeAreaView>
   );
 }
@@ -72,9 +180,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginLeft: 80,
+  flex: {
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: spacing.xl,
+  },
+  listWithIndex: {
+    paddingRight: spacing.md,
+  },
+  resultCount: {
+    ...typography.caption,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xs,
   },
 });

@@ -1,49 +1,98 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../../components/Avatar';
-import { colors, spacing, typography } from '../../../theme';
-import type { Message, User } from '../../../types/models';
+import { HighlightText } from '../../../components/HighlightText';
+import { Icon } from '../../../components/Icon';
+import { PressableScale } from '../../../components/PressableScale';
+import { colors, radius, spacing, typography } from '../../../theme';
+import type { Conversation, User } from '../../../types/models';
 import { formatTime } from '../../../utils/formatTime';
 import { UnreadBadge } from './UnreadBadge';
 
+// Trùng với chuỗi chatService ghi vào lastMessage khi gửi vị trí.
+const LOCATION_PREVIEW = '📍 Vị trí';
+
 type ConversationItemProps = {
   user: User;
-  lastMessage: Message;
-  unread: number;
+  conversation: Conversation;
   isMine: boolean;
   onPress: () => void;
+  query?: string;
+  isFirst?: boolean;
+  isLast?: boolean;
 };
 
 export function ConversationItem({
   user,
-  lastMessage,
-  unread,
+  conversation,
   isMine,
   onPress,
+  query = '',
+  isFirst = false,
+  isLast = false,
 }: ConversationItemProps) {
+  const unread = conversation.unread;
+  const hasUnread = unread > 0;
+  const isLocation = conversation.lastMessage === LOCATION_PREVIEW;
+  const preview = isLocation ? 'Đã chia sẻ vị trí' : conversation.lastMessage;
+  const time = formatTime(conversation.lastTime);
+
   return (
-    <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={onPress}>
-      <Avatar source={user.avatar} size={52} online={user.isOnline} />
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={[
+        `Trò chuyện với ${user.name}`,
+        user.isOnline ? 'đang hoạt động' : null,
+        hasUnread ? `${unread} tin chưa đọc` : null,
+        `${isMine ? 'Bạn: ' : ''}${preview}`,
+        time,
+      ]
+        .filter(Boolean)
+        .join(', ')}
+      scaleTo={0.985}
+      style={[
+        styles.row,
+        hasUnread && styles.rowUnread,
+        isFirst && styles.first,
+        isLast && styles.last,
+      ]}
+      onPress={onPress}
+    >
+      {hasUnread && <View style={styles.signal} />}
+      <Avatar
+        name={user.name}
+        seed={user.id}
+        size={52}
+        online={user.isOnline}
+      />
       <View style={styles.middle}>
-        <Text
-          style={[styles.name, unread > 0 && styles.nameUnread]}
+        <HighlightText
+          text={user.name}
+          query={query}
+          style={[styles.name, hasUnread && styles.nameUnread]}
           numberOfLines={1}
-        >
-          {user.name}
-        </Text>
-        <Text
-          style={[styles.message, unread > 0 && styles.messageUnread]}
-          numberOfLines={1}
-        >
-          {(isMine ? 'Bạn: ' : '') + lastMessage.text}
-        </Text>
+        />
+        <View style={styles.previewRow}>
+          {isMine && <Text style={styles.mine}>Bạn: </Text>}
+          {isLocation && (
+            <View style={styles.pin}>
+              <Icon name="mapPin" size={13} color={colors.primary} />
+            </View>
+          )}
+          <HighlightText
+            text={preview}
+            query={isLocation ? '' : query}
+            style={[styles.message, hasUnread && styles.messageUnread]}
+            numberOfLines={1}
+          />
+        </View>
       </View>
       <View style={styles.right}>
-        <Text style={[styles.time, unread > 0 && styles.timeUnread]}>
-          {formatTime(lastMessage.createdAt)}
+        <Text style={[styles.time, hasUnread && styles.timeUnread]}>
+          {time}
         </Text>
         <UnreadBadge count={unread} />
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -55,6 +104,29 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.md,
     backgroundColor: colors.card,
+    marginHorizontal: spacing.lg,
+    minHeight: 76,
+  },
+  rowUnread: {
+    backgroundColor: colors.primaryMist,
+  },
+  first: {
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+  },
+  last: {
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.tail,
+  },
+  signal: {
+    position: 'absolute',
+    left: 0,
+    top: 18,
+    bottom: 18,
+    width: 3,
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+    backgroundColor: colors.primary,
   },
   middle: {
     flex: 1,
@@ -63,11 +135,23 @@ const styles = StyleSheet.create({
     ...typography.name,
   },
   nameUnread: {
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  mine: {
+    ...typography.bodyMuted,
+    fontWeight: '600',
+  },
+  pin: {
+    marginRight: 3,
   },
   message: {
     ...typography.bodyMuted,
-    marginTop: 2,
+    flexShrink: 1,
   },
   messageUnread: {
     color: colors.text,
@@ -75,12 +159,16 @@ const styles = StyleSheet.create({
   },
   right: {
     alignItems: 'flex-end',
+    alignSelf: 'stretch',
+    justifyContent: 'center',
     gap: 6,
   },
   time: {
     ...typography.caption,
+    ...typography.numeric,
   },
   timeUnread: {
     color: colors.primary,
+    fontWeight: '700',
   },
 });

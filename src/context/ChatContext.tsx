@@ -2,140 +2,128 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
-  useReducer,
+  useState,
   type ReactNode,
 } from 'react';
-import { initialConversations } from '../data/conversations';
-import { initialMessages } from '../data/messages';
-import { currentUser, users } from '../data/users';
-import type { Conversation, Message, User } from '../types/models';
-
-type ChatState = {
-  conversations: Conversation[];
-  messages: Record<string, Message[]>;
-};
-
-type ChatAction =
-  | { type: 'markRead'; conversationId: string }
-  | { type: 'send'; message: Message }
-  | { type: 'create'; conversationId: string; participantId: string };
-
-function chatReducer(state: ChatState, action: ChatAction): ChatState {
-  switch (action.type) {
-    case 'markRead':
-      return {
-        ...state,
-        conversations: state.conversations.map(c =>
-          c.id === action.conversationId ? { ...c, unread: 0 } : c,
-        ),
-      };
-    case 'send': {
-      const { conversationId } = action.message;
-      const list = state.messages[conversationId] ?? [];
-      return {
-        ...state,
-        messages: {
-          ...state.messages,
-          [conversationId]: [...list, action.message],
-        },
-      };
-    }
-    case 'create':
-      if (state.conversations.some(c => c.id === action.conversationId)) {
-        return state;
-      }
-      return {
-        conversations: [
-          ...state.conversations,
-          {
-            id: action.conversationId,
-            participantId: action.participantId,
-            unread: 0,
-          },
-        ],
-        messages: { ...state.messages, [action.conversationId]: [] },
-      };
-  }
-}
+import { subscribeUserChats } from '../services/chatService';
+import { subscribeStatuses, type Status } from '../services/presenceService';
+import { subscribeUsers, type UserProfile } from '../services/userService';
+import type { Conversation, User } from '../types/models';
+import { useAuth } from './AuthContext';
 
 type ChatContextValue = {
   users: User[];
+  usersLoaded: boolean;
+  getUser: (id: string) => User | undefined;
   conversations: Conversation[];
-  messages: Record<string, Message[]>;
+  getConversation: (peerId: string) => Conversation | undefined;
   totalUnread: number;
-  getUser: (userId: string) => User | undefined;
-  markRead: (conversationId: string) => void;
-  sendMessage: (conversationId: string, text: string) => void;
-  openWith: (userId: string) => string;
+  chatsLoaded: boolean;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(chatReducer, {
-    conversations: initialConversations,
-    messages: initialMessages,
-  });
+  const { me } = useAuth();
+  const myId = me?.id;
+  const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
+  const [usersLoaded, setUsersLoaded] = useState(false);
+  const [statuses, setStatuses] = useState<Record<string, Status>>({});
+  const [chats, setChats] = useState<Conversation[]>([]);
+  const [chatsLoaded, setChatsLoaded] = useState(false);
 
-  const getUser = useCallback(
-    (userId: string) => users.find(u => u.id === userId),
-    [],
-  );
-
-  const markRead = useCallback((conversationId: string) => {
-    dispatch({ type: 'markRead', conversationId });
-  }, []);
-
-  const sendMessage = useCallback((conversationId: string, text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) {
+  useEffect(() => {
+    if (!myId) {
+      setProfiles({});
+      setUsersLoaded(false);
       return;
     }
-    dispatch({
-      type: 'send',
-      message: {
-        id: `m-${Date.now()}`,
-        conversationId,
-        senderId: currentUser.id,
-        text: trimmed,
-        createdAt: new Date().toISOString(),
-      },
+    return subscribeUsers(next => {
+      setProfiles(next);
+      setUsersLoaded(true);
     });
-  }, []);
+  }, [myId]);
 
-  const openWith = useCallback(
-    (userId: string) => {
-      const existing = state.conversations.find(
-        c => c.participantId === userId,
-      );
-      if (existing) {
-        return existing.id;
-      }
-      const conversationId = `c-${userId}`;
-      dispatch({ type: 'create', conversationId, participantId: userId });
-      return conversationId;
-    },
-    [state.conversations],
+  useEffect(() => {
+    if (!myId) {
+      setStatuses({});
+      return;
+    }
+    return subscribeStatuses(setStatuses);
+  }, [myId]);
+
+  useEffect(() => {
+    if (!myId) {
+      setChats([]);
+      setChatsLoaded(false);
+      return;
+    }
+    return subscribeUserChats(myId, next => {
+      setChats(next);
+      setChatsLoaded(true);
+    });
+  }, [myId]);
+
+  const allUsers = useMemo(
+    () =>
+      Object.entries(profiles).map(([id, profile]): User => {
+        const status = statuses[id];
+        return {
+          id,
+          name: profile.name,
+          isOnline: status?.online === true,
+          lastSeen: status?.lastChanged ?? null,
+        };
+      }),
+    [profiles, statuses],
+  );
+
+  const users = useMemo(
+    () => allUsers.filter(user => user.id !== myId),
+    [allUsers, myId],
+  );
+
+  const conversations = useMemo(
+    () => [...chats].sort((a, b) => b.lastTime - a.lastTime),
+    [chats],
   );
 
   const totalUnread = useMemo(
-    () => state.conversations.reduce((sum, c) => sum + c.unread, 0),
-    [state.conversations],
+    () => conversations.reduce((sum, c) => sum + c.unread, 0),
+    [conversations],
+  );
+
+  const getUser = useCallback(
+    (id: string) => users.find(user => user.id === id),
+    [users],
+  );
+
+  const getConversation = useCallback(
+    (peerId: string) => conversations.find(c => c.peerId === peerId),
+    [conversations],
   );
 
   const value = useMemo(
     () => ({
       users,
-      conversations: state.conversations,
-      messages: state.messages,
-      totalUnread,
+      usersLoaded,
       getUser,
-      markRead,
-      sendMessage,
-      openWith,
+      conversations,
+      getConversation,
+      totalUnread,
+      chatsLoaded,
     }),
-    [state, totalUnread, getUser, markRead, sendMessage, openWith],
+    [
+      users,
+      usersLoaded,
+      getUser,
+      conversations,
+      getConversation,
+      totalUnread,
+      chatsLoaded,
+    ],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
