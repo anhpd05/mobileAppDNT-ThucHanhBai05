@@ -1,7 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from '../../../components/Avatar';
 import { Icon } from '../../../components/Icon';
-import { colors, spacing, typography } from '../../../theme';
+import { colors, radius, spacing, typography } from '../../../theme';
 import type { User } from '../../../types/models';
 import { formatLastSeen } from '../../../utils/formatTime';
 
@@ -14,15 +14,23 @@ export function ChatHeader({ user, onBack }: ChatHeaderProps) {
   return (
     <View style={styles.container}>
       <TouchableOpacity
+        accessibilityRole="button"
         accessibilityLabel="Quay lại"
-        hitSlop={8}
+        hitSlop={4}
+        style={styles.back}
         onPress={onBack}
       >
         <Icon name="back" size={24} />
       </TouchableOpacity>
-      <Avatar source={user.avatar} size={40} online={user.isOnline} />
+      <Avatar
+        name={user.name}
+        seed={user.id}
+        size={42}
+        online={user.isOnline}
+        pulse
+      />
       <View style={styles.texts}>
-        <Text style={typography.name} numberOfLines={1}>
+        <Text style={styles.name} numberOfLines={1} accessibilityRole="header">
           {user.name}
         </Text>
         {user.isOnline ? (
@@ -31,7 +39,7 @@ export function ChatHeader({ user, onBack }: ChatHeaderProps) {
           </Text>
         ) : (
           <Text style={typography.caption}>
-            {formatLastSeen(user.lastSeen)}
+            {user.lastSeen ? formatLastSeen(user.lastSeen) : 'Ngoại tuyến'}
           </Text>
         )}
       </View>
@@ -44,16 +52,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    paddingHorizontal: spacing.md,
+    paddingLeft: spacing.xs,
+    paddingRight: spacing.lg,
     paddingVertical: spacing.sm,
-    gap: spacing.md,
+    gap: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderWarm,
+  },
+  back: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   texts: {
     flex: 1,
+    marginLeft: spacing.xs,
+  },
+  name: {
+    ...typography.name,
+    fontSize: 17,
+    fontWeight: '700',
   },
   online: {
-    color: colors.online,
+    color: colors.onlineText,
+    fontWeight: '700',
   },
 });
