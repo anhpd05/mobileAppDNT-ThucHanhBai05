@@ -1,0 +1,60 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name'])",
+        "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50" },
+        "$other": { ".validate": false }
+      }
+    },
+    "status": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['online', 'lastChanged'])",
+        "online":      { ".validate": "newData.isBoolean()" },
+        "lastChanged": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "messages": {
+      "$chatId": {
+        ".read": "auth != null && ($chatId.beginsWith(auth.uid + '_') || $chatId.endsWith('_' + auth.uid))",
+        "$msgId": {
+          ".write": "auth != null && !data.exists() && $chatId.matches(/^[A-Za-z0-9]+_[A-Za-z0-9]+$/) && $chatId !== auth.uid + '_' + auth.uid && ($chatId.beginsWith(auth.uid + '_') || $chatId.endsWith('_' + auth.uid))",
+          ".validate": "newData.hasChildren(['from', 'type', 'createdAt']) && ((newData.child('type').val() === 'text' && newData.hasChild('text')) || (newData.child('type').val() === 'location' && newData.hasChild('location')))",
+          "from":      { ".validate": "newData.val() === auth.uid" },
+          "type":      { ".validate": "newData.val() === 'text' || newData.val() === 'location'" },
+          "createdAt": { ".validate": "newData.val() === now" },
+          "text": { ".validate": "newData.isString() && newData.val().length <= 1000 && !newData.val().matches(/^\\s*$/)" },
+          "location": {
+            ".validate": "newData.hasChildren(['lat', 'lng'])",
+            "lat": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+            "lng": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+            "$other": { ".validate": false }
+          },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "userChats": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$peerUid": {
+          ".write": "auth != null && $uid !== $peerUid && newData.exists() && (auth.uid === $uid || auth.uid === $peerUid)",
+          "lastMessage": { ".validate": "newData.isString() && newData.val().length <= 1000" },
+          "lastTime":    { ".validate": "newData.val() === now" },
+          "lastFrom":    { ".validate": "newData.val() === auth.uid" },
+          "unread": {
+            ".validate": "newData.isNumber() && (auth.uid === $uid ? newData.val() === 0 : newData.val() === (data.exists() ? data.val() : 0) + 1)"
+          },
+          "$other": { ".validate": false }
+        }
+      }
+    }
+  }
+}
