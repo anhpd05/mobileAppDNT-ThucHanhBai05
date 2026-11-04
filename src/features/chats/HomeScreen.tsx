@@ -143,7 +143,7 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Chats'>) {
       <EmptyState
         icon="chat"
         title="Chưa có cuộc trò chuyện"
-        message="Chọn một người trong Danh bạ để gửi lời chào đầu tiên."
+        message="Chọn một người trong Danh bạ để bắt đầu nhắn tin."
         action={{
           label: 'Mở Danh bạ',
           onPress: () => navigation.navigate('Contacts'),
@@ -159,7 +159,7 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Chats'>) {
       <EmptyState
         icon="check"
         title="Không còn tin chưa đọc"
-        message="Bạn đã xem hết mọi tin nhắn. Tuyệt vời!"
+        message="Bạn đã đọc hết tin nhắn."
         action={{ label: 'Xem tất cả', onPress: () => changeFilter('all') }}
       />
     ) : (

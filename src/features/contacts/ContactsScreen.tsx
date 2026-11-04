@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/EmptyState';
@@ -12,7 +12,6 @@ import type { MainTabScreenProps } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
 import type { User } from '../../types/models';
 import { INDEX_LETTERS, indexLetter } from '../../utils/names';
-import { AlphabetIndex } from './components/AlphabetIndex';
 import { ContactItem } from './components/ContactItem';
 import { ContactSectionHeader } from './components/ContactSectionHeader';
 
@@ -25,7 +24,6 @@ type ContactSection = {
 export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
   const { users, usersLoaded, conversations } = useChat();
   const [keyword, setKeyword] = useState('');
-  const listRef = useRef<SectionList<User, ContactSection>>(null);
 
   const onlineCount = users.filter(u => u.isOnline).length;
   const query = keyword.trim().toLowerCase();
@@ -35,8 +33,7 @@ export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
     [conversations],
   );
 
-  // Danh bạ kiểu điện thoại: nhóm theo chữ cái đầu của tên (Đ riêng, ký tự lạ
-  // vào '#'), thứ tự nhóm cố định A→Z, trong nhóm xếp theo tên tiếng Việt.
+  // Nhóm theo chữ cái đầu của tên (Đ riêng, ký tự lạ vào '#'), nhóm xếp A→Z.
   const sections = useMemo(() => {
     const groups = new Map<string, User[]>();
     for (const user of users) {
@@ -66,7 +63,6 @@ export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
   }, [users, query]);
 
   const matchedCount = sections.reduce((sum, s) => sum + s.data.length, 0);
-  const showIndex = query === '' && sections.length > 1;
 
   const openChat = useCallback(
     (peerId: string) => navigation.navigate('ChatDetail', { peerId }),
@@ -93,21 +89,12 @@ export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
       {usersLoaded ? (
         <View style={styles.flex}>
           <SectionList
-            ref={listRef}
             sections={sections}
             keyExtractor={u => u.id}
             stickySectionHeadersEnabled
             initialNumToRender={40}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={[
-              styles.listContent,
-              showIndex && styles.listWithIndex,
-            ]}
-            onScrollToIndexFailed={info => {
-              listRef.current
-                ?.getScrollResponder()
-                ?.scrollTo({ y: info.averageItemLength * info.index });
-            }}
+            contentContainerStyle={styles.listContent}
             ListHeaderComponent={
               query !== '' && matchedCount > 0 ? (
                 <Text style={styles.resultCount}>
@@ -139,7 +126,7 @@ export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
                 <EmptyState
                   icon="users"
                   title="Chưa có người dùng khác"
-                  message="Mời bạn bè đăng ký để bắt đầu trò chuyện"
+                  message="Chưa có tài khoản nào khác đăng ký."
                 />
               ) : (
                 <EmptyState
@@ -154,19 +141,6 @@ export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
               )
             }
           />
-          {showIndex && (
-            <AlphabetIndex
-              letters={sections.map(s => s.title)}
-              onSelect={sectionIndex =>
-                listRef.current?.scrollToLocation({
-                  sectionIndex,
-                  itemIndex: 0,
-                  viewOffset: 0,
-                  animated: true,
-                })
-              }
-            />
-          )}
         </View>
       ) : (
         <SkeletonList label="Đang tải danh bạ" rows={8} />
@@ -185,9 +159,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: spacing.xl,
-  },
-  listWithIndex: {
-    paddingRight: spacing.md,
   },
   resultCount: {
     ...typography.caption,

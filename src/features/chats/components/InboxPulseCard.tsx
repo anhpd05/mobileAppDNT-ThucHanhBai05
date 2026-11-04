@@ -19,7 +19,7 @@ type InboxPulseCardProps = {
   onOpenLatestUnread?: () => void;
 };
 
-// Thẻ "nhịp hộp thư": tóm tắt realtime số tin chưa đọc + số người online.
+// Thẻ tóm tắt số tin chưa đọc và số người online.
 export function InboxPulseCard({
   totalUnread,
   unreadChats,
@@ -33,7 +33,7 @@ export function InboxPulseCard({
       <SignalBackdrop originX={1} originY={0} radii={[56, 92, 128]} />
 
       <View style={styles.topRow}>
-        <Text style={styles.overline}>Nhịp hộp thư</Text>
+        <Text style={styles.overline}>Hộp thư</Text>
         <View
           style={styles.liveChip}
           accessible
@@ -65,7 +65,7 @@ export function InboxPulseCard({
           <Text style={styles.caption}>
             {hasUnread
               ? `từ ${unreadChats} cuộc trò chuyện`
-              : 'Hộp thư gọn gàng — nhắn cho ai đó nhé!'}
+              : 'Không có tin chưa đọc'}
           </Text>
         </View>
         {hasUnread && onOpenLatestUnread ? (

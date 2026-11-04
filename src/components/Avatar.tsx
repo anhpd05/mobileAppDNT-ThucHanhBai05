@@ -8,9 +8,9 @@ type AvatarProps = {
   seed: string;
   size?: number;
   online?: boolean;
-  // Chấm online phát sóng (chỉ dùng ở vài chỗ nổi bật, không dùng cho cả danh sách).
+  // Chấm online có hiệu ứng pulse (chỉ dùng vài chỗ, không dùng cho cả danh sách).
   pulse?: boolean;
-  // Vòng gradient "đang phát tín hiệu" quanh avatar (dải Đang hoạt động).
+  // Vòng gradient quanh avatar (dải Đang hoạt động).
   ring?: boolean;
 };
 

@@ -6,7 +6,7 @@ type ContactSectionHeaderProps = {
   count: number;
 };
 
-// Tiêu đề nhóm chữ cái: ô chữ "góc bong bóng" + đường kẻ + số người trong nhóm.
+// Tiêu đề nhóm: chữ cái, đường kẻ và số người trong nhóm.
 export function ContactSectionHeader({
   title,
   count,

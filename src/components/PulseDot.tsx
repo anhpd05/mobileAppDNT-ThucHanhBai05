@@ -9,7 +9,7 @@ type PulseDotProps = {
   borderColor?: string;
 };
 
-// Mô-típ "tín hiệu sống": chấm online phát sóng vòng tròn lan ra.
+// Chấm online có vòng tròn lan ra.
 export function PulseDot({
   size = 10,
   color = colors.online,

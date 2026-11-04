@@ -9,7 +9,7 @@ type ScreenHeaderProps = {
   right?: ReactNode;
   // Chip số đếm cạnh tiêu đề, ví dụ tổng số liên hệ.
   badge?: string;
-  // Chấm tín hiệu trước phụ đề khi nội dung phụ đề là trạng thái realtime.
+  // Hiện chấm trước phụ đề khi phụ đề là trạng thái realtime.
   live?: boolean;
 };
 

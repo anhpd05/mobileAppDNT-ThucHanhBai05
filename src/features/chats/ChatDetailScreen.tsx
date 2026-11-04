@@ -150,7 +150,7 @@ export function ChatDetailScreen({
             <EmptyState
               icon="chat"
               title="Chưa có tin nhắn"
-              message={`Hãy gửi lời chào tới ${peer.name}`}
+              message={`Nhắn tin cho ${peer.name} để bắt đầu.`}
             />
           </View>
         ) : (

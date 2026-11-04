@@ -5,7 +5,7 @@ Sinh viên: **Phạm Đức Anh** - PTIT, Công nghệ phần mềm. Mã học p
 Phát triển tiếp ứng dụng chat của Bài 4 bằng React Native CLI (không dùng Expo). Dữ liệu mẫu được thay bằng dữ liệu thời gian thực trên Firebase (Authentication Email/Password và Realtime Database) để hai người dùng nhắn tin trực tiếp với nhau.
 
 - Dự án Firebase: `chat-realtime-1-1`, Realtime Database ở `asia-southeast1`.
-- Giao diện: `DESIGN.md` mô tả phong cách "Tín hiệu ấm" (nền kem, màu teal, vòng sóng báo trạng thái trực tuyến).
+- Quy ước giao diện: xem `DESIGN.md`.
 
 ## Minh chứng các màn hình
 
@@ -151,7 +151,6 @@ npm test
 
 ## Giới hạn đã biết
 
-- Thanh chữ cái bên phải ở Danh bạ hiển thị nhưng chạm vào chưa nhảy tới nhóm tương ứng (cuộn tay vẫn bình thường).
 - Chưa kiểm tra và chưa build trên iOS; `Info.plist` đã có mô tả quyền vị trí.
 - Thông báo vẫn dùng dữ liệu mẫu như Bài 4.
 - Tin nhắn không có xóa, sửa hay ảnh; mỗi cuộc trò chuyện chỉ tải 200 tin gần nhất.

@@ -1,5 +1,4 @@
-// Nhận diện "Tín hiệu ấm": nền kem ấm + teal đậm làm tín hiệu realtime.
-// Xem DESIGN.md ở gốc repo cho quy tắc dùng từng token.
+// Bảng màu và token giao diện; quy tắc dùng xem DESIGN.md.
 export const colors = {
   primary: '#0B7A7C',
   primaryDeep: '#064E50',
@@ -38,8 +37,7 @@ export const spacing = {
   xxl: 32,
 };
 
-// "Góc bong bóng": mọi khối nổi bật bo tròn lớn, chừa đúng một góc nhỏ
-// (giống đuôi bong bóng chat) — đây là chữ ký hình khối của app.
+// Bo góc; `tail` là góc nhỏ dùng cho thẻ, nút chính, ô nhập.
 export const radius = {
   sm: 8,
   md: 12,

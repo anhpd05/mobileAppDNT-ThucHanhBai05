@@ -12,7 +12,7 @@ import type { MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Tab đang chọn: icon nằm trong viên "góc bong bóng" màu teal nhạt.
+// Tab đang chọn: icon nằm trong nền teal nhạt.
 function renderTabIcon(name: IconName) {
   return ({ color, focused }: { color: string; focused: boolean }) => (
     <View style={[styles.pill, focused && styles.pillActive]}>

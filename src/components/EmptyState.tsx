@@ -11,7 +11,7 @@ type EmptyStateProps = {
   action?: { label: string; onPress: () => void };
 };
 
-// Minh hoạ hai bong bóng chat (đúng chữ ký "góc bong bóng") + huy hiệu icon ngữ cảnh.
+// Hai bong bóng chat minh hoạ kèm huy hiệu icon.
 function Illustration({ icon }: { icon: IconName }) {
   return (
     <View style={styles.art}>

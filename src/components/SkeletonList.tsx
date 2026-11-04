@@ -10,7 +10,7 @@ type SkeletonListProps = {
 
 const WIDTHS = ['62%', '48%', '70%', '55%', '40%', '66%'] as const;
 
-// Khung chờ dạng "hơi thở": các dòng giả mờ/rõ đồng bộ, đúng bố cục dòng thật.
+// Khung chờ: các dòng giả khớp bố cục dòng thật, mờ/rõ luân phiên.
 export function SkeletonList({ rows = 7, label }: SkeletonListProps) {
   const reduced = useReducedMotion();
   const breath = useRef(new Animated.Value(0)).current;

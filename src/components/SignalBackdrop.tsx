@@ -17,7 +17,7 @@ type SignalBackdropProps = {
   beacon?: boolean;
 };
 
-// Nền chữ ký: gradient teal + các vòng "sóng tín hiệu" mờ lan từ một điểm.
+// Nền gradient teal với các vòng tròn mờ lan ra từ một điểm.
 // Đo khung bằng onLayout vì Svg kích thước % không phủ kín khi khung đổi cỡ.
 export function SignalBackdrop({
   originX,
